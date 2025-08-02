@@ -92,7 +92,7 @@ cp env_example.txt .env
 ### **3. API Keys**
 ```bash
 # .env file
-ANTHROPIC_API_KEY=your_anthropic_key_here
+OPENROUTER_API_KEY=your_openrouter_key_here
 SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_APP_TOKEN=xapp-your-app-token
 SLACK_CHANNEL_ID=C1234567890
@@ -147,7 +147,7 @@ In your Slack channel, type: `<START_GAME>`
 ## 🛠️ Technical Details
 
 ### **LLM Integration**
-- **Anthropic Claude** for agent intelligence
+- **OpenRouter API** with Claude 3.5 Sonnet for agent intelligence
 - **Temperature 0.7** for creative but consistent responses
 - **8-character limit** enforced through prompting
 - **Context window** includes recent messages and crisis state

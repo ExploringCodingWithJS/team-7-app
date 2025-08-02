@@ -35,15 +35,15 @@ async def main():
     load_dotenv()
     
     # Get required environment variables
-    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
     slack_bot_token = os.getenv("SLACK_BOT_TOKEN")
     slack_app_token = os.getenv("SLACK_APP_TOKEN")
     slack_channel_id = os.getenv("SLACK_CHANNEL_ID")
     
     # Validate environment variables
     missing_vars = []
-    if not anthropic_api_key:
-        missing_vars.append("ANTHROPIC_API_KEY")
+    if not openrouter_api_key:
+        missing_vars.append("OPENROUTER_API_KEY")
     if not slack_bot_token:
         missing_vars.append("SLACK_BOT_TOKEN")
     if not slack_app_token:
@@ -57,7 +57,7 @@ async def main():
         return
     
     logger.info("🚨 Emergency Response Game System Starting...")
-    logger.info("Using Anthropic Claude for agent intelligence")
+    logger.info("Using OpenRouter API for agent intelligence")
     logger.info(f"Slack Channel: {slack_channel_id}")
     
     try:
@@ -65,7 +65,7 @@ async def main():
         slack_integration = SlackIntegration(slack_bot_token, slack_app_token, slack_channel_id)
         
         # Initialize emergency response manager
-        manager = EmergencyResponseManager(anthropic_api_key, slack_integration)
+        manager = EmergencyResponseManager(openrouter_api_key, slack_integration)
         
         # Set up message handler
         slack_integration.add_message_handler(manager.handle_game_command)

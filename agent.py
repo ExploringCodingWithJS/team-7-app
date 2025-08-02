@@ -1,9 +1,9 @@
 import asyncio
 import random
 import re
+import requests
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
-from anthropic import Anthropic
 from models import (
     EmergencyTeam, CrisisResource, CrisisLocation, MessageType, 
     Message, AgentConfig, GameState, EmergencyVocabulary
@@ -13,7 +13,8 @@ from loguru import logger
 class EmergencyTeamAgent:
     def __init__(self, config: AgentConfig, api_key: str):
         self.config = config
-        self.client = Anthropic(api_key=api_key)
+        self.api_key = api_key
+        self.openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
         self.conversation_history: List[Dict[str, str]] = []
         self.vocabulary: Dict[str, str] = {}
         self.last_response_time = 0
@@ -240,20 +241,43 @@ Based on this situation, send your next 8-character emergency message:"""
         return prompt
 
     async def _call_llm(self, system_prompt: str, user_prompt: str) -> Optional[str]:
-        """Call the LLM to generate a response"""
+        """Call the OpenRouter LLM to generate a response"""
         try:
-            response = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=20,
-                temperature=0.7,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}]
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+
+            data = {
+                "model": "anthropic/claude-3.5-sonnet",
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 20,
+            }
+
+            # Use asyncio to run the synchronous request in a thread pool
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, 
+                lambda: requests.post(self.openrouter_url, headers=headers, json=data, timeout=30)
             )
             
-            return response.content[0].text.strip()
+            response.raise_for_status()
+            result = response.json()
+
+            if "choices" in result and len(result["choices"]) > 0:
+                return result["choices"][0]["message"]["content"].strip()
+            else:
+                logger.warning(f"No choices in API response for {self.config.team.value}")
+                return None
             
         except Exception as e:
-            logger.error(f"LLM call failed for {self.config.team.value}: {e}")
+            logger.error(f"OpenRouter API call failed for {self.config.team.value}: {e}")
             return None
 
     def _extract_message_content(self, response: str) -> Optional[str]:
