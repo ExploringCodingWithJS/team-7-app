@@ -243,7 +243,7 @@ Based on this situation, send your next 8-character emergency message:"""
         """Call the LLM to generate a response"""
         try:
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=20,
                 temperature=0.7,
                 system=system_prompt,

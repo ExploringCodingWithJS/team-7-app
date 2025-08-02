@@ -85,7 +85,7 @@ class SlackIntegration:
             # Trigger game start
             for handler in self.message_handlers:
                 logger.info(f"Calling handler: {handler}")
-                await handler("start_game", {})
+                await handler("START_GAME")
             return
         
         # Check for START_GAME message (alternative format)
@@ -94,7 +94,7 @@ class SlackIntegration:
             await self._send_message("🎮 Starting multi-agent coordination game...")
             # Trigger game start
             for handler in self.message_handlers:
-                await handler("start_game", {})
+                await handler("START_GAME")
             return
         
         # Check if this is a command for the agents
@@ -128,13 +128,13 @@ class SlackIntegration:
             await self._send_message("Starting multi-agent coordination game...")
             # Trigger game start
             for handler in self.message_handlers:
-                await handler("start_game", {})
+                await handler("START_GAME")
         
         elif cmd == "stop":
             await self._send_message("Stopping multi-agent coordination game...")
             # Trigger game stop
             for handler in self.message_handlers:
-                await handler("stop_game", {})
+                await handler("STOP")
         
         elif cmd == "status":
             await self._send_status_message()
@@ -280,6 +280,10 @@ Score: {score:.2f}
             )
         except Exception as e:
             logger.error(f"Error sending message: {e}")
+    
+    async def send_message(self, text: str):
+        """Send a simple text message (public method)."""
+        await self._send_message(text)
     
     async def _send_status_message(self):
         """Send current game status."""
