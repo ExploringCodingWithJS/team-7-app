@@ -2,7 +2,6 @@ import asyncio
 import random
 from datetime import datetime
 from typing import Dict, List, Optional
-from anthropic import Anthropic
 from models import (
     EmergencyTeam, CrisisResource, CrisisLocation, MessageType,
     Message, AgentConfig, GameState, CoordinationEvent
@@ -22,10 +21,10 @@ class EmergencyResponseManager:
         self.running = False
         self.shutdown_event = asyncio.Event()
         
-        # Game timing
-        self.observation_interval = 5  # Check for responses every 5 seconds
-        self.game_duration = 300  # 5 minutes
-        self.crisis_update_interval = 120  # Crisis events every 2 minutes
+        # Game timing - ULTRA FAST for 1-minute testing
+        self.observation_interval = 0.5  # Check for responses every 0.5 seconds (was 3)
+        self.game_duration = 60  # 1 minute (was 300 = 5 minutes)
+        self.crisis_update_interval = 15  # Crisis events every 15 seconds (was 120)
 
     async def start_game(self):
         """Start the emergency response game"""
@@ -46,9 +45,9 @@ class EmergencyResponseManager:
         await self.slack_integration.send_message(
             f"🚨 **EMERGENCY RESPONSE MISSION STARTED** 🚨\n"
             f"3 emergency teams deployed to apartment building explosion.\n"
-            f"**5 minutes to coordinate and save lives!**\n"
+            f"**1 MINUTE TO COORDINATE AND SAVE LIVES!** ⚡\n"
             f"Teams: Fire 🔥 | Medical 🚑 | Police 👮\n"
-            f"**START COORDINATING!**"
+            f"**ULTRA-FAST TEST MODE - START COORDINATING!**"
         )
         
         self.running = True
@@ -65,8 +64,17 @@ class EmergencyResponseManager:
                     await self._end_game()
                     break
                 
-                # Update crisis state
+                # Update crisis state (this processes rescues automatically)
                 self.game_engine.update_crisis_state(self.game_state, elapsed_time)
+                
+                # Check for any rescue operations that happened and notify
+                rescued_locations = self.game_engine.process_rescue_operations(self.game_state)
+                for rescue in rescued_locations:
+                    await self._send_rescue_success(
+                        rescue['location'], 
+                        rescue['victims_saved'], 
+                        rescue['teams']
+                    )
                 
                 # Process agent responses
                 await self._process_agent_round()
@@ -76,7 +84,7 @@ class EmergencyResponseManager:
                     await self._send_crisis_update(elapsed_time)
                 
                 # Send periodic status updates
-                if elapsed_time % 60 == 0 and elapsed_time > 0:  # Every minute
+                if elapsed_time % 15 == 0 and elapsed_time > 0:  # Every 15 seconds (was 60)
                     await self._send_status_update(elapsed_time)
                 
                 # Wait before next round
@@ -112,8 +120,8 @@ class EmergencyResponseManager:
                     # Check for coordination events
                     await self._check_coordination_events(message)
                     
-                    # Add random delay (radio interference simulation)
-                    await asyncio.sleep(random.uniform(0.1, 0.3))
+                    # Minimal delay for ultra-fast testing
+                    await asyncio.sleep(random.uniform(0.01, 0.05))
                     
             except Exception as e:
                 logger.error(f"Error processing {team.value} agent: {e}")
@@ -300,16 +308,21 @@ class EmergencyResponseManager:
         # Calculate final results
         game_result = self.game_engine.get_game_result(self.game_state)
         
+        # Check success condition
+        success_achieved = self.check_scenario_success(self.game_state)
+        success_emoji = "🎉 **MISSION SUCCESS!**" if success_achieved else "🏁 **MISSION COMPLETE**"
+        
         # Send final summary
         await self.slack_integration.send_message(
-            f"🏁 **EMERGENCY RESPONSE MISSION COMPLETE** 🏁\n"
+            f"{success_emoji} 🏁\n"
             f"⏱️ Duration: {game_result['duration']}s | "
             f"🏆 Score: {game_result['final_score']:.1f}\n"
             f"🚑 Lives saved: {game_result['lives_saved']} | "
             f"🔥 Fire contained: {game_result['fire_contained']} | "
             f"👮 Evacuated: {game_result['people_evacuated']}\n"
             f"🤝 Coordination events: {game_result['coordination_events']}\n"
-            f"📚 Emergent vocabulary: {sum(game_result['emergent_vocabulary'].values())} terms"
+            f"📚 Emergent vocabulary: {sum(game_result['emergent_vocabulary'].values())} terms\n"
+            f"{'✅ **COORDINATION SUCCESS!**' if success_achieved else '⚠️ More practice needed'}"
         )
         
         # Send team performance
@@ -319,7 +332,7 @@ class EmergencyResponseManager:
                 f"Victims: {performance['victims_saved']} | "
                 f"Fire: {performance['fire_contained']} | "
                 f"Evacuated: {performance['people_evacuated']} | "
-                f"Transmissions: {performance['transmissions_used']}/6"
+                f"Transmissions: {performance['transmissions_used']}/50"  # Updated to reflect new unlimited limit
             )
         
         # Export game data
@@ -344,6 +357,27 @@ class EmergencyResponseManager:
             await self.slack_integration.send_message("Game stopped by user")
         else:
             await self.slack_integration.send_message(f"Unknown command: {command}")
+
+    async def _send_rescue_success(self, location: CrisisLocation, victims_saved: int, teams_involved: List[EmergencyTeam]):
+        """Send immediate feedback when rescues succeed"""
+        team_names = " + ".join([team.value for team in teams_involved])
+        await self.slack_integration.send_message(
+            f"🎉 **RESCUE SUCCESS!** 🎉\n"
+            f"📍 {location.value}: {victims_saved} victims saved!\n"
+            f"👥 Teams: {team_names}\n"
+            f"⚡ Excellent coordination!"
+        )
+
+    def check_scenario_success(self, game_state: GameState) -> bool:
+        """Check if teams have achieved a successful rescue scenario"""
+        if not game_state.crisis_state.victim_locations:
+            return True  # All victims saved!
+            
+        total_saved = sum(team.victims_saved for team in game_state.team_statuses.values())
+        initial_victims = 6  # Total starting victims (2+1+3 from initial state)
+        
+        # Success if 40% of victims saved for ultra-fast test (was 60%)
+        return total_saved >= (initial_victims * 0.4)
 
     async def shutdown(self):
         """Shutdown the game manager"""

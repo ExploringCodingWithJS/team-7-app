@@ -82,9 +82,9 @@ class TeamStatus(BaseModel):
     last_transmission_time: Optional[datetime] = None
 
 class Message(BaseModel):
-    """Emergency communication message (8-character limit)"""
+    """Emergency communication message (12-character limit)"""
     team: EmergencyTeam
-    content: str = Field(max_length=8)  # 8-character limit
+    content: str = Field(max_length=12)  # Increased from 8 to 12 characters
     message_type: MessageType
     timestamp: datetime
     is_urgent: bool = False
@@ -124,7 +124,7 @@ class GameState(BaseModel):
     total_lives_saved: int = 0
     total_fire_contained: int = 0
     total_evacuated: int = 0
-    game_duration: int = 300  # 5 minutes in seconds
+    game_duration: int = 60  # 1 minute in seconds (was 300)
 
 class AgentConfig(BaseModel):
     """Configuration for each emergency team agent"""
@@ -137,8 +137,8 @@ class AgentConfig(BaseModel):
     response_delay_range: Tuple[float, float] = (0.1, 0.5)
     urgency_threshold: float = 0.7
     coordination_priority: float = 0.8
-    max_transmissions: int = 6
-    transmission_cooldown: float = 0.3  # seconds
+    max_transmissions: int = 50  # Unlimited for testing (was 12)
+    transmission_cooldown: float = 0.01  # Almost no cooldown (was 0.1)
 
 class GameResult(BaseModel):
     """Results of the emergency response game"""

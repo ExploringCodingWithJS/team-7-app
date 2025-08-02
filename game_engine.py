@@ -19,7 +19,7 @@ class CrisisGameEngine:
             "🚨FLASH#6: Evac route blocked by debris"
         ]
         self.crisis_timer = 0
-        self.next_crisis_time = 120  # 2 minutes
+        self.next_crisis_time = 15  # 15 seconds (was 120)
 
     def initialize_game(self) -> GameState:
         """Initialize the emergency response game"""
@@ -199,9 +199,105 @@ Examples: "RTE-RDY" (Route ready), "AMB-BLKD" (Ambulance blocked), "EVAC-CLR" (E
         
         return perspective
 
+    def process_rescue_operations(self, game_state: GameState):
+        """Automatically save lives when coordination conditions are met"""
+        rescued_locations = []
+        
+        # Create a copy to avoid modifying dict during iteration
+        victim_locations_copy = dict(game_state.crisis_state.victim_locations)
+        
+        for location, victim_count in victim_locations_copy.items():
+            if victim_count > 0:
+                # Check if rescue conditions are met
+                if self._can_rescue_at_location(game_state, location):
+                    victims_saved = min(victim_count, 2)  # Save up to 2 per round
+                    teams_involved = self._execute_rescue(game_state, location, victims_saved)
+                    
+                    if victims_saved > 0:
+                        rescued_locations.append({
+                            'location': location,
+                            'victims_saved': victims_saved,
+                            'teams': teams_involved
+                        })
+        
+        return rescued_locations
+
+    def _can_rescue_at_location(self, game_state: GameState, location: CrisisLocation) -> bool:
+        """Check if location can be rescued based on resources"""
+        resources = game_state.resource_allocation
+        
+        # High floors need ladder + medical presence
+        if location in [CrisisLocation.FLOOR_3, CrisisLocation.FLOOR_4]:
+            has_ladder = resources.ladder_location == location and resources.ladder_owner == EmergencyTeam.FIRE
+            has_medical = (resources.ambulance_1_location == location or 
+                          resources.ambulance_2_location == location)
+            return has_ladder and has_medical
+        
+        # Lower floors and lobby just need medical presence  
+        elif location in [CrisisLocation.FLOOR_1, CrisisLocation.FLOOR_2, CrisisLocation.LOBBY]:
+            return (resources.ambulance_1_location == location or 
+                   resources.ambulance_2_location == location)
+        
+        # Exterior locations need police + medical
+        elif location == CrisisLocation.EXTERIOR:
+            has_medical = (resources.ambulance_1_location == location or 
+                          resources.ambulance_2_location == location)
+            has_evac_control = resources.evac_route_status == "CLEAR"
+            return has_medical and has_evac_control
+            
+        return False
+
+    def _execute_rescue(self, game_state: GameState, location: CrisisLocation, victims_saved: int) -> List[EmergencyTeam]:
+        """Execute rescue and update team scores"""
+        teams_involved = []
+        resources = game_state.resource_allocation
+        
+        # Reduce victims at location
+        game_state.crisis_state.victim_locations[location] -= victims_saved
+        if game_state.crisis_state.victim_locations[location] <= 0:
+            del game_state.crisis_state.victim_locations[location]
+        
+        # Award points to involved teams
+        if location in [CrisisLocation.FLOOR_3, CrisisLocation.FLOOR_4]:
+            # High floor rescue - Fire (ladder) + Medical (ambulance)
+            if resources.ladder_owner == EmergencyTeam.FIRE:
+                game_state.team_statuses[EmergencyTeam.FIRE].victims_saved += victims_saved // 2
+                teams_involved.append(EmergencyTeam.FIRE)
+            
+            if resources.ambulance_1_location == location:
+                game_state.team_statuses[EmergencyTeam.MEDICAL].victims_saved += victims_saved // 2 + victims_saved % 2
+                teams_involved.append(EmergencyTeam.MEDICAL)
+            elif resources.ambulance_2_location == location:
+                game_state.team_statuses[EmergencyTeam.MEDICAL].victims_saved += victims_saved // 2 + victims_saved % 2  
+                teams_involved.append(EmergencyTeam.MEDICAL)
+        
+        else:
+            # Lower floor or exterior rescue - Medical gets full credit
+            if resources.ambulance_1_location == location or resources.ambulance_2_location == location:
+                game_state.team_statuses[EmergencyTeam.MEDICAL].victims_saved += victims_saved
+                teams_involved.append(EmergencyTeam.MEDICAL)
+            
+            # Police gets credit for evacuation control
+            if location == CrisisLocation.EXTERIOR and resources.evac_route_status == "CLEAR":
+                game_state.team_statuses[EmergencyTeam.POLICE].people_evacuated += victims_saved
+                teams_involved.append(EmergencyTeam.POLICE)
+        
+        # Record successful coordination
+        self.record_coordination_event(
+            game_state,
+            "SUCCESSFUL_RESCUE",
+            teams_involved,
+            location=location,
+            outcome="SUCCESS",
+            lives_saved=victims_saved,
+            time_saved=30
+        )
+        
+        return teams_involved
+
     def process_resource_request(self, game_state: GameState, requesting_team: EmergencyTeam, 
                                resource: CrisisResource, location: CrisisLocation, 
-                               duration: int = 60) -> bool:
+                               duration: int = 5) -> bool:  # Ultra fast for testing (was 30)
         """Process a resource request between teams"""
         resources = game_state.resource_allocation
         
@@ -240,33 +336,35 @@ Examples: "RTE-RDY" (Route ready), "AMB-BLKD" (Ambulance blocked), "EVAC-CLR" (E
         # Update resource ETAs
         resources = game_state.resource_allocation
         if resources.ladder_eta:
-            resources.ladder_eta = max(0, resources.ladder_eta - 1)
+            resources.ladder_eta = max(0, resources.ladder_eta - 10)  # Ultra fast countdown (was 5)
             if resources.ladder_eta == 0:
                 resources.ladder_owner = None
                 resources.ladder_location = None
                 
         if resources.ambulance_1_eta:
-            resources.ambulance_1_eta = max(0, resources.ambulance_1_eta - 1)
+            resources.ambulance_1_eta = max(0, resources.ambulance_1_eta - 10)  # Ultra fast countdown
             if resources.ambulance_1_eta == 0:
                 resources.ambulance_1_owner = None
                 resources.ambulance_1_location = None
                 
         if resources.ambulance_2_eta:
-            resources.ambulance_2_eta = max(0, resources.ambulance_2_eta - 1)
+            resources.ambulance_2_eta = max(0, resources.ambulance_2_eta - 10)  # Ultra fast countdown
             if resources.ambulance_2_eta == 0:
                 resources.ambulance_2_owner = None
                 resources.ambulance_2_location = None
         
-        # Crisis events every 2 minutes
+        # Note: Rescue operations are checked by agent_manager for notifications
+        
+        # Crisis events every 15 seconds
         if elapsed_time >= self.next_crisis_time:
             self._trigger_crisis_event(game_state)
-            self.next_crisis_time += 120
+            self.next_crisis_time += 15
         
-        # Deteriorating conditions
-        if elapsed_time % 30 == 0:  # Every 30 seconds
+        # Fast deteriorating conditions for 1-minute test
+        if elapsed_time % 20 == 0:  # Every 20 seconds (was 60)
             if crisis_state.gas_pressure_level < 10:
                 crisis_state.gas_pressure_level += 1
-            if crisis_state.building_stability > 0:
+            if crisis_state.building_stability > 2:  # Stop at 2 
                 crisis_state.building_stability -= 1
 
     def _trigger_crisis_event(self, game_state: GameState):

@@ -53,7 +53,7 @@ class EmergencyTeamAgent:
             if response:
                 # Extract and validate message
                 message_content = self._extract_message_content(response)
-                if message_content and len(message_content) <= 8:
+                if message_content and len(message_content) <= 12:  # Increased from 8 to 12
                     # Create message
                     message = Message(
                         team=self.config.team,
@@ -181,25 +181,26 @@ class EmergencyTeamAgent:
         return f"""You are the {self.config.team.value} TEAM in an emergency response scenario.
 
 CRITICAL RULES:
-1. You MUST respond with EXACTLY 8 characters or fewer
+1. You MUST respond with EXACTLY 12 characters or fewer (increased for better coordination)
 2. Use emergency radio protocol - be urgent and direct
 3. Focus on your team's priority: {self.config.priority_focus}
 4. Coordinate with other teams for shared resources
-5. Use shorthand and abbreviations to fit 8 characters
+5. Use shorthand and abbreviations to be efficient
 
 Your team: {self.config.name}
 Priority: {self.config.priority_focus}
 Available resources: {[r.value for r in self.config.available_resources]}
 
-Examples of 8-character messages:
-- "L→SUPR?" (Ladder for suppression?)
-- "‼️3V-F4" (URGENT: 3 victims on Floor 4)
-- "RTE-RDY" (Route ready)
-- "AMB→F4" (Ambulance to Floor 4)
-- "F3✓2V" (Floor 3 clear, 2 victims)
-- "EVAC-CLR" (Evacuation clear)
+Examples of emergency messages:
+- "L→SUPR-F4?" (Ladder for suppression Floor 4?)
+- "‼️3VICTIM-F4" (URGENT: 3 victims Floor 4)
+- "RTE-CLEAR" (Route clear)
+- "AMB1→F4-GO" (Ambulance 1 to Floor 4, go)
+- "F3✓SAVED2V" (Floor 3 clear, saved 2 victims)
+- "EVAC-READY" (Evacuation ready)
+- "COORD-OK" (Coordination okay)
 
-Respond with ONLY the 8-character message, nothing else."""
+Respond with ONLY the emergency message (12 chars max), nothing else."""
 
     def _create_user_prompt(self, perspective: Dict[str, Any], recent_messages: List[Message]) -> str:
         """Create the user prompt with current situation"""
@@ -291,9 +292,9 @@ Based on this situation, send your next 8-character emergency message:"""
         # Remove quotes if present
         content = content.strip('"\'')
         
-        # Take first 8 characters
-        if len(content) > 8:
-            content = content[:8]
+        # Take first 12 characters
+        if len(content) > 12:
+            content = content[:12]
             
         # Ensure it's not empty
         if not content or content.isspace():
