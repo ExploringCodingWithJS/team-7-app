@@ -1,0 +1,137 @@
+*MEDICAL**: :bangbang:`MEDBRAVO//T127//URGENT_TRIAGE
+:ambulance: STATUS`
+[2:00 PM] :cop: **POLICE**: `POLICE_CHARLIE//T126//EVAC_UPDATE
+:rotating_light:`
+[2:00 PM] :rotating_light: **Emergency Response Coordination System** :rotating_light:
+Three emergency teams (Fire :fire:, Medical :ambulance:, Police :cop:) must coordinate during a crisis scenario.
+**Features:**
+• 8-character emergency radio protocol
+• Resource negotiation (ladder, ambulances)
+• Dynamic crisis events every 2 minutes
+• 5-minute time limit
+• Emergent communication patterns
+Type <START_GAME> to begin the emergency response mission!
+[2:00 PM] :rotating_light: **CRITICAL ALERT** :rotating_light:
+:warning: MULTIPLE VICTIMS: 6 people trapped
+Medical team needs immediate assistance!
+[2:00 PM] :fire: **FIRE**: :bangbang:FIRE_TEAM_ALPHA//T161//URGENT_FIRE_OPS
+sjeremy3  [2:00 PM]
+<START_GAME>
+EL  [2:00 PM]
+:ambulance: **MEDICAL**: `MEDBRAVO//T114//CRITICAL_TRIAGE
+:rotating_light:`
+[2:00 PM] :video_game: Starting multi-agent coordination game...
+[2:00 PM] :cop: **POLICE**: `POLICE_CHARLIE//T115//EVAC_PRIORITY
+:rotating_light:`
+[2:00 PM] Game already running!
+[2:00 PM] :rotating_light: **CRITICAL ALERT** :rotating_light:
+:warning: MULTIPLE VICTIMS: 6 people trapped
+Medical team needs immediate assistance!
+[2:00 PM] :fire: **FIRE**: FIRE_TEAM_ALPHA//T120//STATUS_AND_ACTION
+[2:00 PM] :ambulance: **MEDICAL**: :bangbang:`MEDBRAVO//T162//URGENT
+:ambulance: SITUATION CRITICAL`
+[2:00 PM] :cop: **POLICE**: POLICE_CHARLIE//T120//CRITICAL_EVAC_STATUS
+[2:00 PM] :rotating_light: **CRITICAL ALERT** :rotating_light:
+:warning: MULTIPLE VICTIMS: 6 people trapped
+Medical team needs immediate assistance!
+[2:00 PM] :fire: **FIRE**: FIRE_TEAM_ALPHA//T163//TACTICAL_RESPONSE
+[2:00 PM] :ambulance: **MEDICAL**: `MEDBRAVO//T163//TRIAGE_REPORT
+:rotating_light: STATUS`
+[2:00 PM] :cop: **POLICE**: `POLICE_CHARLIE//T163//EVAC_DIRECTIVE
+:rotating_light:`
+[2:00 PM] :rotating_light: **CRITICAL ALERT** :rotating_light:
+:warning: MULTIPLE VICTIMS: 6 people trapped
+Medical team needs immediate assistance!
+[2:00 PM] :fire: **FIRE**: :bangbang:FIRE_TEAM_ALPHA//T164//SITREP_URGENT
+[2:00 PM] :ambulance: **MEDICAL**: :bangbang:`MEDBRAVO//T164//URGENT_MEDICAL
+:ambulance: SITUATION`
+[2:00 PM] :cop: **POLICE**: `POLICE_CHARLIE//T164//EVAC_STATUS
+:oncoming_police_car:`
+[2:01 PM] :rotating_light: **CRITICAL ALERT** :rotating_light:
+:warning: MULTIPLE VICTIMS: 6 people trapped
+Medical team needs immediate assistance!
+sjeremy3  [2:01 PM]
+<QUIT_GAME>
+EL  [2:01 PM]
+:fire: **FIRE**: `FIRE_TEAM_ALPHA//T165//CODE_RED
+:fire_engine:`
+[2:01 PM] :octagonal_sign: Ending game by user request...
+[2:01 PM] :ambulance: **MEDICAL**: :bangbang:`MEDBRAVO//T165//URGENT_TRIAGE
+:ambulance: STATUS`
+[2:01 PM] :checkered_flag: **EMERGENCY RESPONSE MISSION COMPLETE** :checkered_flag:
+:clipboard: Reason: User requested game termination
+:stopwatch: Duration: 228s | :trophy: Score: 121.2
+:ambulance: Lives saved: 0 | :fire: Fire contained: 0 | :cop: Evacuated: 0
+:handshake: Coordination events: 15
+:books: Emergent vocabulary: 3 terms
+[2:01 PM] :cop: **POLICE**: :bangbang:POLICE_CHARLIE//T165//URGENT_EVAC_UPDATE
+[2:01 PM] :bar_chart: **FIRE**: Victims: 0 | Fire: 0 | Evacuated: 0 | Transmissions: 23
+[2:01 PM] :bar_chart: **MEDICAL**: Victims: 0 | Fire: 0 | Evacuated: 0 | Transmissions: 23
+[2:01 PM] :bar_chart: **POLICE**: Victims: 0 | Fire: 0 | Evacuated: 0 | Transmissions: 22
+[2:01 PM] :bar_chart: **EMERGENT COMMUNICATION ANALYSIS** :bar_chart:
+:memo: Total Messages: 69
+:rotating_light: Urgent Messages: 27 (39.1%)
+:wrench: Resource Requests: 0
+:handshake: Coordination Messages: 16
+[2:01 PM] :octagonal_sign: Ending game by user request...
+[2:01 PM] :clipboard: **Message Types:**
+• Status Update: 50
+• Urgent Alert: 3
+• Coordination: 16
+[2:01 PM] No game currently running
+[2:01 PM] :busts_in_silhouette: **Team Communication:**
+• FIRE: 23 messages
+• MEDICAL: 23 messages
+• POLICE: 23 messages
+[2:01 PM] :books: **Emergent Vocabulary Development:**
+• FIRE: 0 terms (0 shorthand, 0 coordination, 0 urgency)
+• MEDICAL: 0 terms (0 shorthand, 0 coordination, 1 urgency)
+• POLICE: 0 terms (0 shorthand, 0 coordination, 2 urgency)
+[2:01 PM] :speech_balloon: **Sample Messages by Team:**
+[2:01 PM] • FIRE: FIRE_TEAM_ALPHA//T163//TACTICAL_RESPONSE | FIRE_TEAM_ALPHA//T164//SITREP_URGENT | FIRE_TEAM_ALPHA//T165//CODE_RED
+:fire_engine:
+[2:01 PM] • MEDICAL: MEDBRAVO//T163//TRIAGE_REPORT
+:rotating_light: STATUS | MEDBRAVO//T164//URGENT_MEDICAL
+:ambulance: SITUATION | MEDBRAVO//T165//URGENT_TRIAGE
+:ambulance: STATUS
+[2:01 PM] • POLICE: POLICE_CHARLIE//T163//EVAC_DIRECTIVE
+:rotating_light: | POLICE_CHARLIE//T164//EVAC_STATUS
+:oncoming_police_car: | POLICE_CHARLIE//T165//URGENT_EVAC_UPDATE
+[2:01 PM] :white_check_mark: **Coordination Success Rate: 100.0%** (16/16)
+[2:01 PM] :checkered_flag: **EMERGENCY RESPONSE MISSION COMPLETE** :checkered_flag:
+:clipboard: Reason: Game ended
+:stopwatch: Duration: 228s | :trophy: Score: 131.2
+:ambulance: Lives saved: 0 | :fire: Fire contained: 0 | :cop: Evacuated: 0
+:handshake: Coordination events: 16
+:books: Emergent vocabulary: 3 terms
+[2:01 PM] :bar_chart: **FIRE**: Victims: 0 | Fire: 0 | Evacuated: 0 | Transmissions: 23
+[2:01 PM] :bar_chart: **MEDICAL**: Victims: 0 | Fire: 0 | Evacuated: 0 | Transmissions: 23
+[2:01 PM] :bar_chart: **POLICE**: Victims: 0 | Fire: 0 | Evacuated: 0 | Transmissions: 23
+[2:01 PM] :bar_chart: **EMERGENT COMMUNICATION ANALYSIS** :bar_chart:
+:memo: Total Messages: 69
+:rotating_light: Urgent Messages: 27 (39.1%)
+:wrench: Resource Requests: 0
+:handshake: Coordination Messages: 16
+[2:01 PM] :clipboard: **Message Types:**
+• Status Update: 50
+• Urgent Alert: 3
+• Coordination: 16
+[2:01 PM] :busts_in_silhouette: **Team Communication:**
+• FIRE: 23 messages
+• MEDICAL: 23 messages
+• POLICE: 23 messages
+[2:01 PM] :books: **Emergent Vocabulary Development:**
+• FIRE: 0 terms (0 shorthand, 0 coordination, 0 urgency)
+• MEDICAL: 0 terms (0 shorthand, 0 coordination, 1 urgency)
+• POLICE: 0 terms (0 shorthand, 0 coordination, 2 urgency)
+[2:01 PM] :speech_balloon: **Sample Messages by Team:**
+[2:01 PM] • FIRE: FIRE_TEAM_ALPHA//T163//TACTICAL_RESPONSE | FIRE_TEAM_ALPHA//T164//SITREP_URGENT | FIRE_TEAM_ALPHA//T165//CODE_RED
+:fire_engine:
+[2:01 PM] • MEDICAL: MEDBRAVO//T163//TRIAGE_REPORT
+:rotating_light: STATUS | MEDBRAVO//T164//URGENT_MEDICAL
+:ambulance: SITUATION | MEDBRAVO//T165//URGENT_TRIAGE
+:ambulance: STATUS
+[2:01 PM] • POLICE: POLICE_CHARLIE//T163//EVAC_DIRECTIVE
+:rotating_light: | POLICE_CHARLIE//T164//EVAC_STATUS
+:oncoming_police_car: | POLICE_CHARLIE//T165//URGENT_EVAC_UPDATE
+[2:01 PM] :white_check_mark: **Coordination Success Rate: 100.0%** (16/16)
