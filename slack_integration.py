@@ -97,6 +97,24 @@ class SlackIntegration:
                 await handler("START_GAME")
             return
         
+        # Check for QUIT_GAME trigger (handle HTML encoding)
+        if clean_text == "<QUIT_GAME>" or clean_text == "&lt;QUIT_GAME&gt;":
+            logger.info("🛑 QUIT_GAME trigger detected!")
+            await self._send_message("🛑 Ending game by user request...")
+            # Trigger game quit
+            for handler in self.message_handlers:
+                await handler("QUIT_GAME")
+            return
+        
+        # Check for QUIT_GAME message (alternative format)
+        clean_text = message_text.strip().upper()
+        if clean_text == "<QUIT_GAME>" or clean_text == "&LT;QUIT_GAME&GT;":
+            await self._send_message("🛑 Ending game by user request...")
+            # Trigger game quit
+            for handler in self.message_handlers:
+                await handler("QUIT_GAME")
+            return
+        
         # Check if this is a command for the agents
         if message_text.startswith("/agent"):
             await self._handle_agent_command(message_text, user_id)
@@ -135,6 +153,12 @@ class SlackIntegration:
             # Trigger game stop
             for handler in self.message_handlers:
                 await handler("STOP")
+        
+        elif cmd == "quit":
+            await self._send_message("Quitting multi-agent coordination game...")
+            # Trigger game quit
+            for handler in self.message_handlers:
+                await handler("QUIT_GAME")
         
         elif cmd == "status":
             await self._send_status_message()
@@ -288,13 +312,13 @@ Score: {score:.2f}
     async def _send_status_message(self):
         """Send current game status."""
         status_text = """
-*Multi-Agent Coordination Game Status*
+*Multi-Agent Emergency Response Game Status*
 
 🟢 System: Running
 🎮 Game: Active
-🤖 Agents: 4 active
-📊 Phase: Discovery
-📈 Score: Calculating...
+🤖 Teams: Fire, Medical, Police
+📊 Mission: Emergency Response
+📈 Status: Coordinating...
 
 Use `/agent help` for available commands.
 """
@@ -303,16 +327,18 @@ Use `/agent help` for available commands.
     async def _send_help_message(self):
         """Send help message with available commands."""
         help_text = """
-*Multi-Agent Coordination Game Commands*
+*Multi-Agent Emergency Response Game Commands*
 
-`<START_GAME>` - Start a new coordination game (simple trigger)
-`/agent start` - Start a new coordination game
+`<START_GAME>` - Start a new emergency response game (simple trigger)
+`<QUIT_GAME>` - End the current game and show final summary (simple trigger)
+`/agent start` - Start a new emergency response game
 `/agent stop` - Stop the current game
+`/agent quit` - End the current game and show final summary
 `/agent status` - Show current game status
 `/agent help` - Show this help message
 
 *About the Game:*
-This is a research system studying emergent communication patterns in multi-agent coordination. Agents develop their own language and strategies to solve resource allocation challenges.
+This is a research system studying emergent communication patterns in multi-agent emergency response coordination. Three teams (Fire, Medical, Police) must coordinate to save lives and contain the crisis.
 """
         await self._send_message(help_text)
     

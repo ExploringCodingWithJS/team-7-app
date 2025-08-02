@@ -48,7 +48,8 @@ class EmergencyResponseManager:
             f"3 emergency teams deployed to apartment building explosion.\n"
             f"**5 minutes to coordinate and save lives!**\n"
             f"Teams: Fire 🔥 | Medical 🚑 | Police 👮\n"
-            f"**START COORDINATING!**"
+            f"**START COORDINATING!**\n"
+            f"DEBUG: Initial conditions - Gas: {self.game_state.crisis_state.gas_pressure_level}, Stability: {self.game_state.crisis_state.building_stability}, Victims: {sum(self.game_state.crisis_state.victim_locations.values())}"
         )
         
         self.running = True
@@ -60,23 +61,31 @@ class EmergencyResponseManager:
                 current_time = datetime.now()
                 elapsed_time = int((current_time - start_time).total_seconds())
                 
-                # Check if game is over
+                # Check if game is over (time limit or problem solved)
                 if elapsed_time >= self.game_duration:
-                    await self._end_game()
+                    await self._end_game("Time limit reached")
+                    break
+                
+                # Check if problem is solved
+                if self.game_engine.is_problem_solved(self.game_state):
+                    await self._end_game("Problem solved successfully!")
                     break
                 
                 # Update crisis state
                 self.game_engine.update_crisis_state(self.game_state, elapsed_time)
                 
+                # Check for critical conditions and send immediate alerts
+                await self._check_critical_conditions(elapsed_time)
+                
                 # Process agent responses
                 await self._process_agent_round()
                 
-                # Send crisis updates
-                if elapsed_time % self.crisis_update_interval == 0 and elapsed_time > 0:
+                # Send crisis updates - more frequent
+                if elapsed_time % 30 == 0 and elapsed_time > 0:  # Every 30 seconds
                     await self._send_crisis_update(elapsed_time)
                 
                 # Send periodic status updates
-                if elapsed_time % 60 == 0 and elapsed_time > 0:  # Every minute
+                if elapsed_time % 45 == 0 and elapsed_time > 0:  # Every 45 seconds
                     await self._send_status_update(elapsed_time)
                 
                 # Wait before next round
@@ -95,14 +104,17 @@ class EmergencyResponseManager:
             return
             
         recent_messages = self.game_state.messages[-10:]  # Last 10 messages
+        logger.info(f"🔄 Processing agent round - {len(self.agents)} teams, {len(recent_messages)} recent messages")
         
         # Process each team
         for team, agent in self.agents.items():
             try:
+                logger.info(f"🎯 Processing {team.value} team...")
                 # Generate response
                 message = await agent.generate_response(self.game_state, recent_messages)
                 
                 if message:
+                    logger.info(f"✅ {team.value} generated message: {message.content}")
                     # Add message to game state
                     self.game_state.messages.append(message)
                     
@@ -114,6 +126,8 @@ class EmergencyResponseManager:
                     
                     # Add random delay (radio interference simulation)
                     await asyncio.sleep(random.uniform(0.1, 0.3))
+                else:
+                    logger.info(f"❌ {team.value} generated no message")
                     
             except Exception as e:
                 logger.error(f"Error processing {team.value} agent: {e}")
@@ -152,12 +166,26 @@ class EmergencyResponseManager:
         minutes = elapsed_time // 60
         seconds = elapsed_time % 60
         
+        # Add urgency indicators based on crisis state
+        urgency_indicators = []
+        if crisis_state.gas_pressure_level >= 7:
+            urgency_indicators.append("⚠️ GAS CRITICAL")
+        if crisis_state.building_stability <= 3:
+            urgency_indicators.append("⚠️ BUILDING UNSTABLE")
+        if len(crisis_state.fire_locations) >= 3:
+            urgency_indicators.append("⚠️ MULTIPLE FIRES")
+        if any(count >= 2 for count in crisis_state.victim_locations.values()):
+            urgency_indicators.append("⚠️ VICTIMS TRAPPED")
+            
+        urgency_text = " | ".join(urgency_indicators) if urgency_indicators else ""
+        
         await self.slack_integration.send_message(
             f"🚨 **CRISIS UPDATE** 🚨\n"
             f"{event}\n"
             f"Time: {minutes}:{seconds:02d} | "
             f"Gas: {crisis_state.gas_pressure_level}/10 | "
-            f"Building: {crisis_state.building_stability}/10"
+            f"Building: {crisis_state.building_stability}/10\n"
+            f"{urgency_text}"
         )
 
     async def _send_status_update(self, elapsed_time: int):
@@ -290,7 +318,7 @@ class EmergencyResponseManager:
             time_saved=30
         )
 
-    async def _end_game(self):
+    async def _end_game(self, reason: str = "Game ended"):
         """End the game and show results"""
         if not self.game_state:
             return
@@ -303,6 +331,7 @@ class EmergencyResponseManager:
         # Send final summary
         await self.slack_integration.send_message(
             f"🏁 **EMERGENCY RESPONSE MISSION COMPLETE** 🏁\n"
+            f"📋 Reason: {reason}\n"
             f"⏱️ Duration: {game_result['duration']}s | "
             f"🏆 Score: {game_result['final_score']:.1f}\n"
             f"🚑 Lives saved: {game_result['lives_saved']} | "
@@ -319,14 +348,149 @@ class EmergencyResponseManager:
                 f"Victims: {performance['victims_saved']} | "
                 f"Fire: {performance['fire_contained']} | "
                 f"Evacuated: {performance['people_evacuated']} | "
-                f"Transmissions: {performance['transmissions_used']}/6"
+                f"Transmissions: {performance['transmissions_used']}"
             )
+        
+        # Send emergent communication analysis
+        await self._send_emergent_communication_summary()
         
         # Export game data
         filename = self.game_engine.export_game_data(self.game_state, game_result)
         logger.info(f"Game data exported to {filename}")
         
         logger.info("Emergency response game completed")
+
+    async def _check_critical_conditions(self, elapsed_time: int):
+        """Check for critical conditions and send immediate alerts"""
+        if not self.game_state:
+            return
+            
+        crisis_state = self.game_state.crisis_state
+        
+        # Check for critical gas pressure
+        if crisis_state.gas_pressure_level >= 8:
+            await self.slack_integration.send_message(
+                f"🚨 **CRITICAL ALERT** 🚨\n"
+                f"⚠️ GAS PRESSURE CRITICAL: {crisis_state.gas_pressure_level}/10\n"
+                f"Building at risk of explosion! Teams must act immediately!"
+            )
+            
+        # Check for critical building stability
+        if crisis_state.building_stability <= 2:
+            await self.slack_integration.send_message(
+                f"🚨 **CRITICAL ALERT** 🚨\n"
+                f"⚠️ BUILDING STABILITY CRITICAL: {crisis_state.building_stability}/10\n"
+                f"Structure may collapse! Evacuate immediately!"
+            )
+            
+        # Check for multiple victims
+        total_victims = sum(crisis_state.victim_locations.values())
+        if total_victims >= 4:
+            await self.slack_integration.send_message(
+                f"🚨 **CRITICAL ALERT** 🚨\n"
+                f"⚠️ MULTIPLE VICTIMS: {total_victims} people trapped\n"
+                f"Medical team needs immediate assistance!"
+            )
+
+    async def _send_emergent_communication_summary(self):
+        """Send detailed analysis of emergent communication patterns"""
+        if not self.game_state:
+            return
+            
+        # Analyze message patterns
+        messages = self.game_state.messages
+        total_messages = len(messages)
+        
+        if total_messages == 0:
+            await self.slack_integration.send_message("📊 **No messages recorded**")
+            return
+        
+        # Message type analysis
+        message_types = {}
+        urgency_count = 0
+        resource_requests = 0
+        coordination_messages = 0
+        
+        for msg in messages:
+            msg_type = msg.message_type.value
+            message_types[msg_type] = message_types.get(msg_type, 0) + 1
+            
+            if msg.is_urgent:
+                urgency_count += 1
+            if msg.message_type.value == "resource_request":
+                resource_requests += 1
+            if msg.message_type.value == "coordination":
+                coordination_messages += 1
+        
+        # Team communication analysis
+        team_messages = {}
+        for msg in messages:
+            team = msg.team.value
+            team_messages[team] = team_messages.get(team, 0) + 1
+        
+        # Vocabulary analysis
+        vocab_summary = {}
+        for team, vocab in self.game_state.emergency_vocabulary.items():
+            vocab_summary[team.value] = {
+                "shorthand_terms": vocab.shorthand_developed,
+                "coordination_terms": vocab.coordination_terms,
+                "urgency_terms": vocab.urgency_terms,
+                "total_vocabulary": len(vocab.vocabulary)
+            }
+        
+        # Send detailed summary
+        await self.slack_integration.send_message(
+            f"📊 **EMERGENT COMMUNICATION ANALYSIS** 📊\n"
+            f"📝 Total Messages: {total_messages}\n"
+            f"🚨 Urgent Messages: {urgency_count} ({urgency_count/total_messages*100:.1f}%)\n"
+            f"🔧 Resource Requests: {resource_requests}\n"
+            f"🤝 Coordination Messages: {coordination_messages}"
+        )
+        
+        # Message type breakdown
+        type_breakdown = "\n".join([f"• {k.replace('_', ' ').title()}: {v}" for k, v in message_types.items()])
+        await self.slack_integration.send_message(
+            f"📋 **Message Types:**\n{type_breakdown}"
+        )
+        
+        # Team communication breakdown
+        team_breakdown = "\n".join([f"• {team}: {count} messages" for team, count in team_messages.items()])
+        await self.slack_integration.send_message(
+            f"👥 **Team Communication:**\n{team_breakdown}"
+        )
+        
+        # Vocabulary development
+        vocab_breakdown = ""
+        for team, stats in vocab_summary.items():
+            vocab_breakdown += f"• {team}: {stats['total_vocabulary']} terms "
+            vocab_breakdown += f"({stats['shorthand_terms']} shorthand, "
+            vocab_breakdown += f"{stats['coordination_terms']} coordination, "
+            vocab_breakdown += f"{stats['urgency_terms']} urgency)\n"
+        
+        await self.slack_integration.send_message(
+            f"📚 **Emergent Vocabulary Development:**\n{vocab_breakdown}"
+        )
+        
+        # Sample messages from each team
+        await self.slack_integration.send_message("💬 **Sample Messages by Team:**")
+        for team in EmergencyTeam:
+            team_msgs = [msg for msg in messages if msg.team == team]
+            if team_msgs:
+                sample_msgs = [msg.content for msg in team_msgs[-3:]]  # Last 3 messages
+                sample_text = " | ".join(sample_msgs)
+                await self.slack_integration.send_message(f"• {team.value}: {sample_text}")
+        
+        # Coordination success rate
+        coordination_events = self.game_state.coordination_events
+        successful_coordinations = len([e for e in coordination_events if e.outcome == "SUCCESS"])
+        total_coordinations = len(coordination_events)
+        
+        if total_coordinations > 0:
+            success_rate = successful_coordinations / total_coordinations * 100
+            await self.slack_integration.send_message(
+                f"✅ **Coordination Success Rate: {success_rate:.1f}%** "
+                f"({successful_coordinations}/{total_coordinations})"
+            )
 
     async def handle_game_command(self, command: str):
         """Handle game commands from Slack"""
@@ -342,6 +506,11 @@ class EmergencyResponseManager:
         elif command.upper() == "STOP":
             self.running = False
             await self.slack_integration.send_message("Game stopped by user")
+        elif command.upper() == "QUIT_GAME":
+            if self.running:
+                await self._end_game("User requested game termination")
+            else:
+                await self.slack_integration.send_message("No game currently running")
         else:
             await self.slack_integration.send_message(f"Unknown command: {command}")
 

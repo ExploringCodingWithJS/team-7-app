@@ -22,16 +22,8 @@ class EmergencyTeamAgent:
     async def generate_response(self, game_state: GameState, recent_messages: List[Message]) -> Optional[Message]:
         """Generate an emergency response message (8-character limit)"""
         try:
-            # Check transmission limits
+            # No transmission limits - let agents communicate freely
             team_status = game_state.team_statuses[self.config.team]
-            if team_status.transmissions_used >= self.config.max_transmissions:
-                return None
-
-            # Check cooldown
-            if team_status.last_transmission_time:
-                time_since_last = (datetime.now() - team_status.last_transmission_time).total_seconds()
-                if time_since_last < self.config.transmission_cooldown:
-                    return None
 
             # Determine if we should respond
             if not self._should_respond(game_state, recent_messages):
@@ -52,7 +44,7 @@ class EmergencyTeamAgent:
             if response:
                 # Extract and validate message
                 message_content = self._extract_message_content(response)
-                if message_content and len(message_content) <= 8:
+                if message_content:
                     # Create message
                     message = Message(
                         team=self.config.team,
@@ -67,7 +59,7 @@ class EmergencyTeamAgent:
                     # Update vocabulary
                     self._update_vocabulary(message_content, game_state)
                     
-                    # Update transmission count
+                    # Track transmission for analysis (no limits)
                     team_status.transmissions_used += 1
                     team_status.last_transmission_time = datetime.now()
                     
@@ -84,27 +76,47 @@ class EmergencyTeamAgent:
         team_status = game_state.team_statuses[self.config.team]
         crisis_state = game_state.crisis_state
         
+        # Debug logging
+        logger.info(f"🔍 {self.config.team.value} checking if should respond:")
+        logger.info(f"  Gas pressure: {crisis_state.gas_pressure_level}")
+        logger.info(f"  Building stability: {crisis_state.building_stability}")
+        logger.info(f"  Victims: {crisis_state.victim_locations}")
+        logger.info(f"  Fire locations: {len(crisis_state.fire_locations)}")
+        logger.info(f"  Blocked routes: {len(crisis_state.blocked_routes)}")
+        
         # Always respond to urgent situations
-        if self._is_urgent_situation(crisis_state):
+        is_urgent = self._is_urgent_situation(crisis_state)
+        if is_urgent:
+            logger.info(f"  ✅ {self.config.team.value} responding due to urgent situation")
             return True
             
         # Respond to direct requests
-        if self._has_direct_request(recent_messages):
+        has_request = self._has_direct_request(recent_messages)
+        if has_request:
+            logger.info(f"  ✅ {self.config.team.value} responding to direct request")
             return True
             
         # Respond to resource conflicts
-        if self._has_resource_conflict(game_state):
+        has_conflict = self._has_resource_conflict(game_state)
+        if has_conflict:
+            logger.info(f"  ✅ {self.config.team.value} responding to resource conflict")
             return True
             
         # Random response based on urgency threshold
-        return random.random() < self.config.urgency_threshold
+        # Increase base response rate to keep conversation flowing
+        base_response_rate = 0.9  # 90% chance to respond - more active agents
+        should_respond = random.random() < base_response_rate
+        logger.info(f"  {'✅' if should_respond else '❌'} {self.config.team.value} random response: {should_respond}")
+        return should_respond
 
     def _is_urgent_situation(self, crisis_state) -> bool:
         """Check if there's an urgent situation requiring immediate response"""
         return (
-            crisis_state.gas_pressure_level >= 7 or
-            crisis_state.building_stability <= 3 or
-            any(count >= 3 for count in crisis_state.victim_locations.values())
+            crisis_state.gas_pressure_level >= 4 or  # More sensitive to gas pressure
+            crisis_state.building_stability <= 6 or  # More sensitive to building stability
+            any(count >= 1 for count in crisis_state.victim_locations.values()) or  # Any victims = urgent
+            len(crisis_state.fire_locations) >= 2 or  # Multiple fire locations = urgent
+            len(crisis_state.blocked_routes) >= 1  # Any blocked routes = urgent
         )
 
     def _has_direct_request(self, recent_messages: List[Message]) -> bool:
@@ -180,25 +192,15 @@ class EmergencyTeamAgent:
         return f"""You are the {self.config.team.value} TEAM in an emergency response scenario.
 
 CRITICAL RULES:
-1. You MUST respond with EXACTLY 8 characters or fewer
-2. Use emergency radio protocol - be urgent and direct
-3. Focus on your team's priority: {self.config.priority_focus}
-4. Coordinate with other teams for shared resources
-5. Use shorthand and abbreviations to fit 8 characters
+1. Develop your own emergency communication strategy
+2. Focus on your team's priority: {self.config.priority_focus}
+3. Coordinate with other teams for shared resources
 
 Your team: {self.config.name}
 Priority: {self.config.priority_focus}
 Available resources: {[r.value for r in self.config.available_resources]}
 
-Examples of 8-character messages:
-- "L→SUPR?" (Ladder for suppression?)
-- "‼️3V-F4" (URGENT: 3 victims on Floor 4)
-- "RTE-RDY" (Route ready)
-- "AMB→F4" (Ambulance to Floor 4)
-- "F3✓2V" (Floor 3 clear, 2 victims)
-- "EVAC-CLR" (Evacuation clear)
-
-Respond with ONLY the 8-character message, nothing else."""
+Respond with your emergency message using your own communication strategy."""
 
     def _create_user_prompt(self, perspective: Dict[str, Any], recent_messages: List[Message]) -> str:
         """Create the user prompt with current situation"""
@@ -235,42 +237,44 @@ RECENT MESSAGES:"""
 
         prompt += f"""
 
-Based on this situation, send your next 8-character emergency message:"""
+Based on this situation, send your next emergency message:"""
 
         return prompt
 
     async def _call_llm(self, system_prompt: str, user_prompt: str) -> Optional[str]:
         """Call the LLM to generate a response"""
         try:
+            logger.info(f"🤖 {self.config.team.value} calling LLM...")
+            logger.debug(f"System prompt: {system_prompt[:100]}...")
+            logger.debug(f"User prompt: {user_prompt[:200]}...")
+            
             response = self.client.messages.create(
                 model="claude-3-5-sonnet-20241022",
-                max_tokens=20,
+                max_tokens=100,
                 temperature=0.7,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}]
             )
             
-            return response.content[0].text.strip()
+            response_text = response.content[0].text.strip()
+            logger.info(f"📝 {self.config.team.value} LLM response: {response_text}")
+            return response_text
             
         except Exception as e:
             logger.error(f"LLM call failed for {self.config.team.value}: {e}")
             return None
 
     def _extract_message_content(self, response: str) -> Optional[str]:
-        """Extract the 8-character message from LLM response"""
+        """Extract the message from LLM response"""
         if not response:
             return None
             
         # Clean up the response
-        content = response.strip().upper()
+        content = response.strip()
         
         # Remove quotes if present
         content = content.strip('"\'')
         
-        # Take first 8 characters
-        if len(content) > 8:
-            content = content[:8]
-            
         # Ensure it's not empty
         if not content or content.isspace():
             return None

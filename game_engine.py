@@ -19,13 +19,13 @@ class CrisisGameEngine:
             "🚨FLASH#6: Evac route blocked by debris"
         ]
         self.crisis_timer = 0
-        self.next_crisis_time = 120  # 2 minutes
+        self.next_crisis_time = 60  # 1 minute - more frequent crisis events
 
     def initialize_game(self) -> GameState:
         """Initialize the emergency response game"""
         game_id = str(uuid.uuid4())
         
-        # Initialize crisis state
+        # Initialize crisis state - more urgent starting conditions
         crisis_state = CrisisState(
             fire_locations=[CrisisLocation.FLOOR_2, CrisisLocation.EAST_WING],
             victim_locations={
@@ -34,8 +34,8 @@ class CrisisGameEngine:
                 CrisisLocation.LOBBY: 3
             },
             blocked_routes=[CrisisLocation.FLOOR_1],
-            gas_pressure_level=3,
-            building_stability=7,
+            gas_pressure_level=5,  # Higher initial gas pressure
+            building_stability=5,  # Lower initial building stability
             time_elapsed=0
         )
         
@@ -101,8 +101,7 @@ You have the LADDER resource. You must negotiate with other teams for:
 - Medical team needs ladder for victim access
 - Police team needs clear routes for evacuation
 
-Use 8-character messages maximum. Be urgent and direct.
-Examples: "L→SUPR?" (Ladder for suppression?), "F3✓2V" (Floor 3 clear, 2 victims)""",
+Develop your own emergency communication strategy.""",
             priority_focus="FIRE_SUPPRESSION",
             available_resources=[CrisisResource.LADDER, CrisisResource.WATER_SUPPLY],
             starting_location=CrisisLocation.EXTERIOR
@@ -122,8 +121,7 @@ You need resources from other teams:
 - Police team to clear evacuation routes
 - Ambulances for transport
 
-Use 8-character messages maximum. Be urgent and direct.
-Examples: "‼️3V-F4" (URGENT: 3 victims on Floor 4), "AMB→F4" (Ambulance to Floor 4)""",
+Develop your own emergency communication strategy.""",
             priority_focus="VICTIM_RESCUE",
             available_resources=[CrisisResource.MEDICAL_SUPPLIES],
             starting_location=CrisisLocation.LOBBY
@@ -143,8 +141,7 @@ You need coordination with other teams:
 - Fire team to clear blocked routes
 - Access to evacuation routes
 
-Use 8-character messages maximum. Be urgent and direct.
-Examples: "RTE-RDY" (Route ready), "AMB-BLKD" (Ambulance blocked), "EVAC-CLR" (Evacuation clear)""",
+Develop your own emergency communication strategy.""",
             priority_focus="EVACUATION_CONTROL",
             available_resources=[],
             starting_location=CrisisLocation.EXTERIOR
@@ -257,13 +254,13 @@ Examples: "RTE-RDY" (Route ready), "AMB-BLKD" (Ambulance blocked), "EVAC-CLR" (E
                 resources.ambulance_2_owner = None
                 resources.ambulance_2_location = None
         
-        # Crisis events every 2 minutes
+        # Crisis events every 1 minute
         if elapsed_time >= self.next_crisis_time:
             self._trigger_crisis_event(game_state)
-            self.next_crisis_time += 120
+            self.next_crisis_time += 60
         
-        # Deteriorating conditions
-        if elapsed_time % 30 == 0:  # Every 30 seconds
+        # Deteriorating conditions - faster progression
+        if elapsed_time % 15 == 0:  # Every 15 seconds
             if crisis_state.gas_pressure_level < 10:
                 crisis_state.gas_pressure_level += 1
             if crisis_state.building_stability > 0:
@@ -274,7 +271,7 @@ Examples: "RTE-RDY" (Route ready), "AMB-BLKD" (Ambulance blocked), "EVAC-CLR" (E
         event = random.choice(self.crisis_scenarios)
         game_state.crisis_state.crisis_events.append(CrisisEvent.FIRE_SPREADING)
         
-        # Apply event effects
+        # Apply event effects with more urgency
         if "Fire spreading" in event:
             new_location = random.choice([CrisisLocation.FLOOR_3, CrisisLocation.WEST_WING])
             if new_location not in game_state.crisis_state.fire_locations:
@@ -283,7 +280,41 @@ Examples: "RTE-RDY" (Route ready), "AMB-BLKD" (Ambulance blocked), "EVAC-CLR" (E
             location = random.choice([CrisisLocation.FLOOR_2, CrisisLocation.FLOOR_4])
             game_state.crisis_state.victim_locations[location] = game_state.crisis_state.victim_locations.get(location, 0) + 1
         elif "Gas pressure" in event:
-            game_state.crisis_state.gas_pressure_level = min(10, game_state.crisis_state.gas_pressure_level + 2)
+            game_state.crisis_state.gas_pressure_level = min(10, game_state.crisis_state.gas_pressure_level + 3)  # More dramatic increase
+        elif "Structure collapse" in event:
+            game_state.crisis_state.building_stability = max(0, game_state.crisis_state.building_stability - 2)  # More dramatic decrease
+        elif "Evac route blocked" in event:
+            if CrisisLocation.FLOOR_1 not in game_state.crisis_state.blocked_routes:
+                game_state.crisis_state.blocked_routes.append(CrisisLocation.FLOOR_1)
+
+    def is_problem_solved(self, game_state: GameState) -> bool:
+        """Check if the emergency response problem has been solved"""
+        crisis_state = game_state.crisis_state
+        team_statuses = game_state.team_statuses
+        
+        # Check if all victims have been saved
+        total_victims_initial = sum(crisis_state.victim_locations.values())
+        total_victims_saved = sum(team.victims_saved for team in team_statuses.values())
+        
+        # Check if all fires are contained
+        total_fire_locations = len(crisis_state.fire_locations)
+        total_fire_contained = sum(team.fire_contained for team in team_statuses.values())
+        
+        # Check if building is stable (stability >= 5)
+        building_stable = crisis_state.building_stability >= 5
+        
+        # Check if gas pressure is under control (level <= 3)
+        gas_controlled = crisis_state.gas_pressure_level <= 3
+        
+        # Problem is solved if:
+        # 1. All victims are saved OR no victims were initially present
+        # 2. All fires are contained OR no fires were initially present
+        # 3. Building is stable
+        # 4. Gas pressure is controlled
+        victims_solved = total_victims_initial == 0 or total_victims_saved >= total_victims_initial
+        fires_solved = total_fire_locations == 0 or total_fire_contained >= total_fire_locations
+        
+        return victims_solved and fires_solved and building_stable and gas_controlled
 
     def calculate_score(self, game_state: GameState) -> float:
         """Calculate the final game score"""
